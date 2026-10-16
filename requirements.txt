@@ -1,0 +1,5 @@
+fastembed>=0.3
+usearch>=2.9
+jieba>=0.42
+numpy>=1.24
+qrcode>=7.4      # 扫码登录（可选：不用扫码可不装）
