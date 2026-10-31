@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bili-digest"
+version = "4.0.0"
+description = "把 B站收藏变成本地可检索的知识库：字幕/弹幕/评论 → LLM 提炼 → 混合检索 + MCP 服务"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "bili-digest contributors" }]
+keywords = ["rag", "retrieval", "bilibili", "knowledge-base", "mcp", "sqlite"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Text Processing :: Indexing",
+]
+
+dependencies = [
+    "fastembed>=0.3",
+    "usearch>=2.9",
+    "jieba>=0.42",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+# 扫码登录用；不用扫码可不装
+login = ["qrcode>=7.4"]
+# quiz --rate 的间隔重复排程
+review = ["fsrs>=5.0"]
+# 切词引擎，装了省约 1.1 秒启动
+tokenizer = ["cppjieba-py-dat"]
+# MCP server 需要官方 SDK
+mcp = ["mcp>=1.0"]
+
+[project.scripts]
+kb = "bili_digest.cli.main:main"
+kb-mcp = "bili_digest.mcp.server:main"
+
+[tool.setuptools.packages.find]
+include = ["bili_digest*"]
+exclude = ["tests*", "docs*"]
+
+[tool.setuptools.package-data]
+bili_digest = ["py.typed"]
