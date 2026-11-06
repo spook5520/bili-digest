@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bili-digest"
+version = "4.0.0"
+description = "把 B站收藏变成本地可检索的知识库：字幕/弹幕/评论 → LLM 提炼 → 混合检索 + MCP 服务"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "bili-digest contributors" }]
+keywords = ["rag", "retrieval", "bilibili", "knowledge-base", "mcp", "sqlite"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Text Processing :: Indexing",
+]
+
+dependencies = [
+    "fastembed>=0.3",
+    # ★ 上界是必须的（2026-11-06 审计）。
+    #   本机装的是 2.9.2（2024-03-05），而 `usearch>=2.9` 让 pip install -e . 装到 2.26.6（2026-10-25）——
+    #   **相差 2 年 7 个月、17 个 minor**。而 rag_core 调了 `Index._resolve_current` 这种私有 API，
+    #   那个名字没有任何兼容性承诺。加上界把「大概率能跑」变成「已验证能跑」。
+    #   本机 2.9.2 实测过的调用面：add / search / save / load / remove / get / view / compact。
+    "usearch>=2.9,<2.10",
+    # jieba 0.42.1 是最后一版（2020-01-20 发布，作者不再维护）——
+    # 所以「可更新」在这个包上不成立。而 [tokenizer] 组另有 cppjieba-py-dat，
+    # 那意味着项目里有两条切词路径。要不要合并是另一个问题，不是升级问题。
+    "jieba>=0.42",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+# 扫码登录用；不用扫码可不装
+login = ["qrcode>=7.4"]
+# quiz --rate 的间隔重复排程
+review = ["fsrs>=5.0"]
+# 切词引擎，装了省约 1.1 秒启动
+tokenizer = ["cppjieba-py-dat"]
+# MCP server 需要官方 SDK
+mcp = ["mcp>=1.0"]
+# 按需 ASR（给无字幕条目补字幕）；不装不影响任何既有功能
+asr = ["faster-whisper>=1.0", "yt-dlp>=2024.1"]
+
+[project.scripts]
+kb = "bili_digest.cli.main:main"
+kb-mcp = "bili_digest.mcp.server:main"
+
+[tool.setuptools.packages.find]
+include = ["bili_digest*"]
+exclude = ["tests*", "docs*"]
+
+[tool.setuptools.package-data]
+# weights.toml 是检索权重的唯一来源，装包时必须一起带上 ——
+# 少了它，rag_core 在 import 阶段就会抛 ConfigError（不静默兜底）。
+bili_digest = ["py.typed", "retrieve/weights.toml"]

@@ -1,0 +1,63 @@
+# 检索权重 —— 唯一来源
+#
+# 为什么单独成文件：这些数字此前写在 rag_core.py 里，改一个数没有前值记录、
+# 没有影响面预估、没有回滚路径。现在它们在这里，代码只读不算。
+#
+# 每条都可撤销：改动走 bili_digest/tools/weights.py，
+# 它会在改之前存一份完整前值 + 排序指纹，改之后能逐位核对回来：
+#
+#   python -m bili_digest.tools.weights show
+#   python -m bili_digest.tools.weights set comment=0.90            # 只看影响面（不写盘）
+#   python -m bili_digest.tools.weights set comment=0.90 --apply    # 写盘并留前值
+#   python -m bili_digest.tools.weights revert                      # 回到前一态
+#   python -m bili_digest.tools.weights verify --last               # 逐位核对
+#
+# 取值区间（2026-11-01 块级实测，见 docs-常数审计.md）：
+#   comment   0.80 ~ 0.90 是噪声平台，0.85 是峰；<=0.70 与 >=0.95 都变差
+#   danmaku   0.20 ~ 0.65 内逐查询零差 —— 这个数值本身不可辩，
+#             可辩的是「必须显著低于 comment」（比值约 1.9 才压得住首位弹幕）
+#   short_penalty  0.30 ~ 0.60；0.60 起首位短块率从 1% 升到 3%
+#   literal_boost  2.0 是 RRF 支配阈值的解析值（双路/单路 rank1 分数比），
+#                  2.0 与 3.0 逐查询零差 —— 只有开/关两态，别当超参数调
+
+[scoring]
+literal_boost = 2.0
+short_chars = 12
+short_penalty = 0.55
+
+# ── 长查询时对「闲聊类块」额外降权 ──
+#
+# 实测（2026-11-02，10 组 × 3 种问法）：R@10 三组完全相同（90%），
+# 但 R@1 从 70%（半句）掉到 50%（问题句）。
+# 看「我想在安卓上 hook 一个函数，用 Frida 应该怎么下手？」的 top-10：
+#   前 5 条全是「提到 Frida 但不回答问题」的短块
+#   [annotation] [comment] [seg_summary] [comment] [summary]，金标第 6 位才出现。
+#
+# 机制不是语义稀释（否则 R@10 会掉，它没掉），是【长查询让字面命中变多】。
+# 为什么按长度而不是一律降：短查询（「Frida」）时评论里那句
+# 「frida 能在安卓上装 hook 虚拟机吗」是有用的旁证；
+# 长查询（用户在描述情境）时他要的是讲解，不是闲聊。
+long_query_chars = 15      # 查询字符数达到该值算「长查询」
+long_chat_penalty = 0.70   # comment/danmaku/annotation 的额外系数
+#
+# 取 0.70 的依据（2026-11-02 实测，查询「我想在安卓上 hook 一个函数，用 Frida 应该怎么下手？」，32 字）：
+#   0.82 → top6 kinds [seg_summary, annotation, summary, comment, meta, comment]  ← 还有 2 个评论
+#   0.70 → top6 kinds [seg_summary, summary, annotation, meta, key_points, subtitle_seg]  ← 评论归零
+#   0.60 → [seg_summary, summary, meta, key_points, subtitle_seg, annotation]
+#   0.50 → [seg_summary, summary, meta, key_points, subtitle_seg, insights]   ← 太狠，annotation 也掉
+# 0.70 是拐点：闲聊类退出，但「我的批注」仍在第 3 位（那是有信息的旁证）。
+
+[scoring.kind_weight]
+# 内容本身：信息密度最高，不与观众反应平权
+subtitle = 1.0
+subtitle_seg = 1.0
+summary = 1.0
+key_points = 1.0
+insights = 1.0
+audience = 1.0
+growth = 1.0
+meta = 1.0
+annotation = 1.0
+# 观众反应：评论比弹幕更完整，但仍低于内容
+comment = 0.85
+danmaku = 0.45

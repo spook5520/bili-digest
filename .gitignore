@@ -1,0 +1,44 @@
+# 数据（体积大，可由代码重新生成）
+*.db
+*.db-shm
+*.db-wal
+knowledge.db.bak-*
+*.usearch
+*.keys.json
+vec_state/
+
+# 抓取产物（原始数据，可从网络重取）
+bili-digest-out/
+rag1/
+v4/
+v5/
+*.sqlite
+*.sqlite.bak
+
+# 嵌入模型（约 91MB，首次运行自动下载）
+models/
+models--*/
+
+# 运行产物与日志
+*.log
+audit_result.json
+bench*_result.json
+calibrate*_result.json
+batch_state.json
+discover_candidates.json
+search-*.json
+__pycache__/
+*.pyc
+
+# 评测工具的判定缓存（可重新生成）
+.cache/
+
+# 扫码登录的临时产物
+qrcode.png
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 凭据（绝不入库）
+.env
