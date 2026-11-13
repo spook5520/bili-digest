@@ -46,7 +46,8 @@ SHORT_PENALTY = _CFG["short_penalty"]
 
 KIND_WEIGHT = dict(_CFG["kind_weight"])
 
-_DEFAULT_EXCLUDED = "subtitle"
+from bili_digest.schema.types import NO_FTS_KINDS as _NO_FTS
+_DEFAULT_EXCLUDED = ",".join(sorted(_NO_FTS))
 _EXCLUDED = {k.strip() for k in
              (_os.environ.get("KB_EXCLUDE_KINDS", _DEFAULT_EXCLUDED) or "").split(",")
              if k.strip()}

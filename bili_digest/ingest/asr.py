@@ -192,7 +192,7 @@ def _transcribe_sensevoice(path: Path, language: str = "zh",
         raise RuntimeError(
             "SenseVoice 模型不全：需要 %s/model.int8.onnx、tokens.txt 与 %s"
             % (SENSEVOICE_DIR, VAD_MODEL)
-            + chr(10) + "  下载见 docs-SenseVoice实测.md（hf-mirror，约 228 MB + 1.8 MB）")
+            + chr(10) + "  下载见 SenseVoice 实测文档（hf-mirror，约 228 MB + 1.8 MB）")
     rec, load_sec = _load_sensevoice(threads)
     audio = load_wav(path)
     sr = 16000

@@ -14,6 +14,8 @@ import sys
 import time
 from pathlib import Path
 
+from bili_digest.schema.types import in_fts
+
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
     try:
@@ -317,6 +319,8 @@ def info_len(text: str) -> int:
 def index_block(con: sqlite3.Connection, block_id: int, text: str,
                 item_uid: str, kind: str) -> None:
     if info_len(text) < MIN_INFO_CHARS:
+        return
+    if not in_fts(kind):
         return
     mode = ensure_fts(con)
 

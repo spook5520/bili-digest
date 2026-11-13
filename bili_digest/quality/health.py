@@ -65,6 +65,25 @@ def snapshot(full: bool = False) -> dict:
     except Exception as e:
         rows["金丝雀"] = ("WARN", "-", "%s: %s" % (type(e).__name__, str(e)[:40]))
 
+    try:
+        import numpy as _np
+        from bili_digest.paths import VEC as _VEC
+        from bili_digest.retrieve import rag_core as _rc
+        _vi = _rc.VectorIndex(str(_VEC), readonly=True)
+        _probe = _np.random.RandomState(20261112).randn(_vi.dim).astype(_np.float32)
+        _got = [b for b in _vi.search(_probe, 16) if b != 0]
+        _uniq = len(set(_got))
+        _ok = _uniq >= 2
+        rows["向量可遍历"] = (
+            "OK" if _ok else "FAIL",
+            "%d 个不同块" % _uniq,
+            "" if _ok else
+            "搜索仅返回 %r —— 图不可遍历或 keys 读取通道失效，跑一次 index --rebuild" % (_got[:4],),
+        )
+    except Exception as e:
+        rows["向量可遍历"] = ("WARN", "未测",
+                             "%s: %s" % (type(e).__name__, str(e)[:40]))
+
     _ci_r = None
     _T0 = __import__("time").perf_counter()
     try:
@@ -85,8 +104,13 @@ def snapshot(full: bool = False) -> dict:
     try:
         from bili_digest.schema.core_schema import info_len as _il, MIN_INFO_CHARS as _MIC
 
-        _KINDS = ("subtitle_seg", "subtitle", "comment", "danmaku", "annotation")
-        _ph = ",".join("?" * len(_KINDS))
+        from bili_digest.retrieve import rag_core as _rg
+        _excluded = set(getattr(_rg, "_EXCLUDED", set()) or ())
+        _KINDS = tuple(k for k in
+                       ("subtitle_seg", "subtitle", "comment", "danmaku", "annotation")
+                       if k not in _excluded)
+
+        _ph = ",".join("?" * len(_KINDS)) or "NULL"
 
         _have = {}
         for _r in con.execute(
@@ -481,7 +505,7 @@ def render(rows: dict, ages_map: dict | None = None) -> list:
     STALE_DAYS = 7.0
     lines = ["", "  ── 库健康 ─────────────────────────────", ""]
 
-    order = ["金丝雀", "索引一致性", "陈旧向量", "关键词基线", "切段完整性", "提炼覆盖",
+    order = ["金丝雀", "向量可遍历", "索引一致性", "陈旧向量", "关键词基线", "切段完整性", "提炼覆盖",
              "空壳", "抓取失败", "索引余量", "重排缓存", "表示一致性", "主题具体度",
              "内容层密度", "字幕新鲜度", "核心依赖", "B站登录态", "缺口线索"]
     for k in order:
