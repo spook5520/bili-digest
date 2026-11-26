@@ -1,0 +1,65 @@
+[importlinter]
+root_package = bili_digest
+
+# ═══ 规矩 1：核心层不许知道入口层 ═══
+#
+# 「依赖指向内层」的最小可检验形式。schema / retrieve / distill / graph 是
+# 数据的家与算法，它们不该知道有个 CLI 或 MCP 存在 —— 否则换入口就要改它们。
+[importlinter:contract:core-independence]
+name = 核心层不许 import 入口层
+type = forbidden
+source_modules =
+    bili_digest.schema
+    bili_digest.retrieve
+    bili_digest.distill
+    bili_digest.graph
+forbidden_modules =
+    bili_digest.cli
+    bili_digest.mcp
+
+# ═══ 规矩 2：schema 是地板 ═══
+#
+# schema 定义表和类型，是全项目最底层。破了意味着「表结构依赖业务逻辑」。
+# 这条曾经是破的：now_sec() 住在 retrieve/temporal.py，而 schema 要用它 ——
+# 数据层 import 检索层。已把 now_sec 移到 schema/time.py（2026-11-04）。
+[importlinter:contract:schema-is-floor]
+name = schema 不许依赖任何业务包
+type = forbidden
+source_modules =
+    bili_digest.schema
+forbidden_modules =
+    bili_digest.adapters
+    bili_digest.ingest
+    bili_digest.distill
+    bili_digest.retrieve
+    bili_digest.graph
+    bili_digest.output
+    bili_digest.quality
+# ★ allow_indirect_imports：与规矩 3 同理。
+#   实测 schema -> paths -> adapters.sources 这条链，而 paths 是根模块
+#   （几乎所有模块都要 import 它）。越界的是 paths 而不是 schema ——
+#   paths.source_key() 里做了「来源类型是否注册」的校验，那是【调用方】的责任。
+#   修 paths 是另一件事（记在 DEVELOPMENT 待办），不该让规矩 2 一直红。
+allow_indirect_imports = True
+
+# ═══ 规矩 3：适配层不许直接知道下游 ═══
+#
+# adapters 的职责只有一件：把平台事实翻译成通用 dict。
+#
+# ★ 用 allow_indirect_imports：这条只拦【直接】依赖。
+#   实测有一条四跳的间接链 adapters -> ingest.fetcher -> distill.extract
+#   -> tools.build_kb_index -> retrieve.rag_core，而它的根源在
+#   distill/extract.py 里「提炼完顺手入索引」那段（那是编排层的事）。
+#   **规矩该拦你能控制的直接行为，不该拦四跳之外的间接后果** ——
+#   否则修 adapters 是修错了地方。那条链记在 DEVELOPMENT 的待办里。
+[importlinter:contract:adapters-know-nothing-downstream]
+name = adapters 不许直接依赖检索/输出/入口
+type = forbidden
+source_modules =
+    bili_digest.adapters
+forbidden_modules =
+    bili_digest.retrieve
+    bili_digest.output
+    bili_digest.mcp
+    bili_digest.cli
+allow_indirect_imports = True

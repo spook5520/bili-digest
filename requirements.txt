@@ -1,0 +1,9 @@
+fastembed>=0.3
+usearch>=2.9
+jieba>=0.42
+numpy>=1.24
+qrcode>=7.4      # 扫码登录（可选：不用扫码可不装）
+fsrs>=5.0        # 间隔重复排程（可选：只用 quiz --rate 才需要）
+cppjieba-py-dat  # 切词引擎（可选：装了省约 1.1 秒启动，见 core_schema._tokenizer）
+faster-whisper>=1.0  # 按需 ASR（可选：kb asr 用；另需 yt-dlp 与 ffmpeg）
+yt-dlp>=2024.1       # 按需 ASR（可选：下音频用）
